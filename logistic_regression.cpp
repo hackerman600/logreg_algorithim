@@ -268,7 +268,7 @@ double calculate_accuracy(Eigen::MatrixXd output,  Eigen::MatrixXd class_labels)
 
     //std::cout << "tally = " << tally << std::endl;
     //std::cout << "output.rows() = " << output.rows() << std::endl;
-    double outme = tally / 600.0;
+    double outme = tally / output.rows() * 100;
     //double outme = (tally / output.rows()) * 100;
     //std::cout << "tally / output.rows() * 100 = " << outme << std::endl;
     return outme;
@@ -310,14 +310,20 @@ int main(){
     int epoch = 1000;
     double total_log_cost;
     double total_log_accuracy; 
+    double total_log_accuracy_test; 
     float old_total_log_accuracy;
-    double alpha = 0.0000001;
+    double alpha = 0.000001;
    
     //load the data
     Eigen::MatrixXd x_train = matrix_creation("/home/kali/Desktop/machine_learning/neural_networks/from_scratch/cpp_networks/x_train.csv");
+    Eigen::MatrixXd x_test = matrix_creation("/home/kali/Desktop/machine_learning/neural_networks/from_scratch/cpp_networks/x_test.csv");
     Eigen::MatrixXd y_train = matrix_creation("/home/kali/Desktop/machine_learning/neural_networks/from_scratch/cpp_networks/y_train.csv");
+    Eigen::MatrixXd y_test = matrix_creation("/home/kali/Desktop/machine_learning/neural_networks/from_scratch/cpp_networks/y_test.csv");
+     
     std::cout << "x_train.size() = (" << x_train.rows() << "," << x_train.cols() << ")" << std::endl;
     std::cout << "y_train.size() = (" << y_train.rows() << "," << y_train.cols() << ")" << std::endl;
+    std::cout << "x_test.size() = (" << x_test.rows() << "," << x_test.cols() << ")" << std::endl;
+    std::cout << "y_test.size() = (" << y_test.rows() << "," << y_test.cols() << ")" << std::endl;
     
     //normalise data
     x_train /= 255;
@@ -344,17 +350,9 @@ int main(){
         
         if (epoch_no > 0){
             //std::cout << "itter: " << epoch_no << " Binary log cost: " << total_log_cost/10.0 << std::endl;
-            std::cout << "itter: " << epoch_no << " total log accuracy: " << total_log_accuracy/10.0 << std::endl;
+            std::cout << "itter: " << epoch_no << " x_train accuracy: " << total_log_accuracy/10.0 << " x_test accuracy: " << total_log_accuracy_test/10.0 << std::endl;
 
-            if (total_log_accuracy/10.0 >= 91){
-            std::cout << "91% accuracy acheived, ending here :)" << std::endl;
-            //save weights
-            std::string weightz = create_weights_txtfile(weights,bias);
-            std::cout << weightz;
-            return 0;
-            }
-
-        } old_total_log_accuracy = total_log_accuracy; total_log_cost = 0.0; total_log_accuracy = 0.0;
+        } total_log_accuracy_test = 0.0; old_total_log_accuracy = total_log_accuracy; total_log_cost = 0.0; total_log_accuracy = 0.0;
 
         for (int model_no = 0; model_no < classes; model_no++){
             Eigen::MatrixXd z_output = (x_train * weights[model_no] + bias[model_no]).rowwise().sum();
@@ -368,7 +366,18 @@ int main(){
             total_log_accuracy += log_accuracy;
             std::vector<Eigen::MatrixXd> gradients = calculate_gradients(x_train, output, z_output, class_labels);
             weights[model_no] -= alpha * gradients[0];
-            //bias[model_no] -= alpha * gradients[1];
+            bias[model_no] -= alpha * gradients[1];
+
+            //calculate test accuracy
+            Eigen::MatrixXd z_output_test = (x_test * weights[model_no] + Eigen::MatrixXd::Constant(x_test.rows(), 1, bias[model_no](0,0))).rowwise().sum();
+            //std::cout << "z_output.shape() = (" << z_output.rows() << "," << z_output.cols() << ")" << std::endl;
+            Eigen::MatrixXd output_test = sigmoid_output(z_output_test);//std::cout << "z_output = (" << z_output.rows() << "," << z_output.cols() << ")" << std::endl;  
+            //std::cout << "output.shape() = (" << output.rows() << "," << output.cols() << ")" << std::endl;
+            Eigen::MatrixXd class_labels_test = create_labels(y_test, model_no);
+            //double log_cost = calculate_binary_log_cost(output, class_labels);
+            //total_log_cost += log_cost; 
+            double log_accuracy_test = calculate_accuracy(output_test, class_labels_test);
+            total_log_accuracy_test += log_accuracy_test;
 
         }
 
@@ -376,7 +385,20 @@ int main(){
             alpha *= 2;
         }
 
+        if (total_log_accuracy/10.0 >= 90){
+            std::cout << "90% accuracy acheived on training data saving weights and bias to desktop, ending here :)" << std::endl;
+            
+            //save weights
+            std::string weightz = create_weights_txtfile(weights,bias);
+            std::cout << weightz;
+            return 0;
+            }
+
     }    
+
+
+
+
 
     return 0;
 }
