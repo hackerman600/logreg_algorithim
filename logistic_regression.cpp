@@ -310,6 +310,7 @@ int main(){
     int epoch = 1000;
     double total_log_cost;
     double total_log_accuracy; 
+    float old_total_log_accuracy;
     double alpha = 0.0000001;
    
     //load the data
@@ -353,7 +354,7 @@ int main(){
             return 0;
             }
 
-        } total_log_cost = 0.0; total_log_accuracy = 0.0;
+        } old_total_log_accuracy = total_log_accuracy; total_log_cost = 0.0; total_log_accuracy = 0.0;
 
         for (int model_no = 0; model_no < classes; model_no++){
             Eigen::MatrixXd z_output = (x_train * weights[model_no] + bias[model_no]).rowwise().sum();
@@ -368,13 +369,14 @@ int main(){
             std::vector<Eigen::MatrixXd> gradients = calculate_gradients(x_train, output, z_output, class_labels);
             weights[model_no] -= alpha * gradients[0];
             //bias[model_no] -= alpha * gradients[1];
+
+        }
+
+        if (total_log_accuracy == old_total_log_accuracy){
+            alpha *= 2;
         }
 
     }    
-
-
-
-
 
     return 0;
 }
